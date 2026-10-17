@@ -38,7 +38,7 @@
   "image": "https://www.studio54barberia.com/assets/img/og-image.jpg",
   "url": "https://www.studio54barberia.com/",
   "telephone": "+52-1-921-260-0164",
-  "priceRange": "$150-$350",
+  "priceRange": "$50-$400",
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "Av. Reforma 000, Col. Centro",
@@ -678,7 +678,7 @@ section{ position:relative; padding:88px 0; }
     <div class="section-head reveal">
       <div class="eyebrow">Catálogo de servicios</div>
       <h2 class="section-title">Cada servicio, <span class="gold-text">una firma</span></h2>
-      <p class="section-desc">Precios de referencia — se ajustan a tu lista real de servicios.</p>
+      <p class="section-desc">Precisión y estilo en cada detalle.</p>
     </div>
     <div class="services__grid reveal-stagger" id="servicesGrid">
       <!-- Las tarjetas se generan también vía JS a partir de CONFIG.services para
@@ -906,12 +906,11 @@ const CONFIG = {
     hours: "Lunes a Viernes 10:00–20:00 · Sábado 9:00–18:00 · Domingo cerrado",
   },
   services: [
-    { id:'clasico', icon:'icon-scissors', name:'Corte Clásico', price:180, desc:'Corte a tijera y máquina + acabado profesional con toalla caliente.' },
-    { id:'corte-barba', icon:'icon-razor', name:'Corte + Barba', price:280, badge:'Más Solicitado', desc:'La combinación perfecta: corte de precisión y perfilado de barba.' },
-    { id:'barba', icon:'icon-droplet', name:'Arreglo de Barba', price:150, desc:'Perfilado, contorno y diseño de barba con navaja.' },
-    { id:'premium', icon:'icon-crown', name:'Corte Premium', price:350, badge:'Experiencia Studio 54', desc:'Corte, barba, mascarilla facial y bebida de cortesía.' },
-    { id:'diseno', icon:'icon-star-badge', name:'Diseño Personalizado', price:220, desc:'Líneas y diseños a detalle para un estilo único.' },
-    { id:'infantil', icon:'icon-comb', name:'Corte Infantil', price:150, desc:'Corte para los más pequeños, con paciencia y buen trato.' },
+    { id:'corte-general', icon:'icon-scissors', name:'Corte General', price:250, desc:'Corte a tijera y máquina + acabado profesional con toalla caliente.' },
+    { id:'corte-barba', icon:'icon-razor', name:'Corte y Barba', price:400, badge:'Más Solicitado', desc:'La combinación perfecta: corte de precisión y perfilado de barba.' },
+    { id:'barba', icon:'icon-droplet', name:'Barba', price:300, desc:'Perfilado, contorno y diseño de barba con navaja.' },
+    { id:'bigote', icon:'icon-comb', name:'Bigote', price:50, desc:'Recorte y perfilado de bigote a detalle.' },
+    { id:'ceja', icon:'icon-star-badge', name:'Ceja', price:50, desc:'Limpieza y perfilado de ceja para un acabado definido.' },
   ],
   bookingDays: 6, // Cuántos días próximos muestra la agenda (se calculan a partir de hoy)
   // Disponibilidad simulada por día de la semana (dom, lun, mar, mie, jue, vie, sab).
