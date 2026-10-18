@@ -61,7 +61,7 @@ y abrir `http://localhost:4173`.
 - [ ] **Redes sociales**: los íconos de Instagram/Facebook/TikTok están deshabilitados (`href="#"`) hasta tener los enlaces reales
 - [ ] **Testimonios**: los 3 actuales son de ejemplo (marcados con la etiqueta "Ejemplo" en la tarjeta) — sustitúyelos por reseñas reales de clientes
 - [ ] **Galería**: las tarjetas actuales son marcadores de posición (etiqueta "Demo" al pasar el cursor) — sustituir por fotografía real del local
-- [ ] **Dominio real**: actualizar las URLs `https://www.studio54barberia.com/` en las etiquetas `<meta>` Open Graph, `canonical` y el JSON-LD del `<head>`, una vez que se confirme el dominio definitivo
+- [x] **Dominio real**: `studio54barberia.com` (archivo `CNAME` + registros DNS apuntando a GitHub Pages)
 
 ## Desplegar
 
