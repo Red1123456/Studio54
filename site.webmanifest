@@ -2,12 +2,12 @@
   "name": "Studio 54 Barbería",
   "short_name": "Studio 54",
   "description": "Barbería de autor — cortes de precisión y experiencia premium.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#080706",
   "theme_color": "#080706",
   "icons": [
-    { "src": "/assets/img/android-chrome-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/assets/img/android-chrome-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "assets/img/android-chrome-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/img/android-chrome-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
