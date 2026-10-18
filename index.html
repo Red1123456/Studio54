@@ -348,6 +348,11 @@ section{ position:relative; padding:88px 0; }
 .pick b{ font-family:var(--font-display); font-weight:400; font-size:17px; color:var(--gold-light); }
 .pick:hover{ border-color:var(--hairline-strong); }
 .pick.is-active{ background:rgba(201,162,75,.1); border-color:var(--gold); color:var(--white); }
+.barber-pick{ justify-content:flex-start; gap:16px; padding:12px 18px 12px 12px; font-size:15px; }
+.barber-pick__photo{ width:56px; height:56px; flex-shrink:0; border-radius:50%; object-fit:cover; border:1px solid var(--hairline-strong); background:var(--charcoal); transition:border-color .3s var(--ease); }
+.barber-pick__photo--any{ display:grid; place-items:center; color:var(--gold-light); }
+.barber-pick__photo--any svg{ width:22px; height:22px; }
+.barber-pick.is-active .barber-pick__photo{ border:2px solid var(--gold); }
 
 .days-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 @media(min-width:640px){ .days-row{ grid-template-columns:repeat(6,1fr); } }
@@ -770,7 +775,7 @@ section{ position:relative; padding:88px 0; }
       <p class="lead">Studio 54 nació de una idea simple: la imagen de un hombre habla antes que él. Por eso combinamos el oficio tradicional del barbero con un espacio pensado para la exclusividad, el detalle y el buen trato — de la puerta a la silla, y de la silla a la calle.</p>
       <div class="about__stats">
         <div class="about__stat"><b>8+</b><span>Años</span></div>
-        <div class="about__stat"><b>3</b><span>Barberos</span></div>
+        <div class="about__stat"><b>4</b><span>Barberos</span></div>
         <div class="about__stat"><b>4.9</b><span>Valoración</span></div>
       </div>
       <ul class="about__list">
@@ -952,6 +957,14 @@ const CONFIG = {
     slug: "fluxsofy-com-r-studio54",
   },
   bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
+  // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
+  // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
+  barbers: [
+    { match:'daniel', name:'Daniel (Jack)', photo:'imagenes barberos/web/daniel-jack.jpg' },
+    { match:'wegner', name:'Wegner', photo:'imagenes barberos/web/wegner.jpg' },
+    { match:'andres', name:'Andres', photo:'imagenes barberos/web/andres.jpg' },
+    { match:'marco', name:'Marcos (Polo)', photo:'imagenes barberos/web/marcos-polo.jpg' },
+  ],
   gallery: [
     { icon:'icon-scissors', title:'Cortes de Precisión', tag:'Cortes', big:true },
     { icon:'icon-razor', title:'Diseños de Barba', tag:'Barba' },
@@ -1083,6 +1096,12 @@ const booking = {
 };
 const currentService = () => booking.services.find(s => s.id === booking.serviceId);
 const currentBarber = () => booking.team.find(m => m.id === booking.barberId);
+// Une al barbero de Fluxsofy con su foto y nombre de CONFIG.barbers.
+function barberInfo(member){
+  const key = normalize(member.name).split(/[\s(]/)[0];
+  const local = CONFIG.barbers.find(b => b.match === key);
+  return { name: local ? local.name : member.name, photo: local ? local.photo : member.photoDataUrl };
+}
 const isToday = (date) => date.toDateString() === new Date().toDateString();
 
 function notice(text, withWhatsapp){
@@ -1115,11 +1134,16 @@ function renderBarberPicker(){
   numberSteps();
   if (step.hidden) return;
   const options = [{ id:'', name:'Cualquiera disponible' }, ...booking.team];
-  $('#barberPicker').innerHTML = options.map(m => `
-    <button class="pick ${m.id===booking.barberId?'is-active':''}" data-barber="${esc(m.id)}" aria-pressed="${m.id===booking.barberId}">
-      <span>${esc(m.name)}</span>
-    </button>
-  `).join('');
+  $('#barberPicker').innerHTML = options.map(m => {
+    const info = m.id ? barberInfo(m) : null;
+    const avatar = info && info.photo
+      ? `<img class="barber-pick__photo" src="${esc(info.photo)}" alt="" width="56" height="56" loading="lazy">`
+      : `<span class="barber-pick__photo barber-pick__photo--any"><svg><use href="#icon-scissors"/></svg></span>`;
+    return `
+    <button class="pick barber-pick ${m.id===booking.barberId?'is-active':''}" data-barber="${esc(m.id)}" aria-pressed="${m.id===booking.barberId}">
+      ${avatar}<span>${esc(info ? info.name : m.name)}</span>
+    </button>`;
+  }).join('');
   $$('#barberPicker .pick').forEach(btn => btn.addEventListener('click', () => {
     booking.barberId = btn.getAttribute('data-barber');
     renderBarberPicker();
@@ -1175,7 +1199,7 @@ function updateSummary(){
   const service = currentService();
   setText('#ticketService', service ? service.name : '—', !service);
   $('#ticketBarberRow').hidden = booking.team.length < 2;
-  setText('#ticketBarber', currentBarber() ? currentBarber().name : 'Cualquiera disponible');
+  setText('#ticketBarber', currentBarber() ? barberInfo(currentBarber()).name : 'Cualquiera disponible');
   setText('#ticketDay', booking.day ? dayLong(parseDay(booking.day.date)) : 'Elige un día', !booking.day);
   setText('#ticketTime', booking.time ? time12(booking.time) : 'Elige una hora', !booking.time);
   $('#ticketTotal').textContent = service ? priceFmt(service.price) : '—';
