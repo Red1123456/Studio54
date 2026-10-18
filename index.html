@@ -381,6 +381,24 @@ section{ position:relative; padding:88px 0; }
 .toast.is-visible{ transform:translate(-50%,0); }
 .toast svg{ width:18px; height:18px; color:var(--ok); }
 
+.booking__notice{ grid-column:1/-1; padding:18px; border:1px dashed var(--hairline-strong); border-radius:var(--radius); font-size:13.5px; line-height:1.6; color:var(--muted); text-align:center; }
+.booking__notice a{ color:var(--gold-light); text-decoration:underline; }
+.booking__step[hidden], .ticket__row[hidden]{ display:none; }
+.ticket__form{ display:grid; gap:12px; margin:0 0 18px; }
+.ticket__form label{ display:grid; gap:6px; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted-2); }
+.ticket__form input[type=text], .ticket__form input[type=tel]{ width:100%; padding:13px 14px; background:var(--charcoal); border:1px solid var(--hairline); border-radius:var(--radius); color:var(--white); font:inherit; font-size:14px; letter-spacing:normal; text-transform:none; }
+.ticket__form input:focus{ outline:none; border-color:var(--gold); }
+.ticket__form .ticket__consent{ display:flex; gap:10px; align-items:flex-start; font-size:12px; letter-spacing:normal; text-transform:none; color:var(--muted); line-height:1.5; }
+.ticket__consent input{ margin-top:2px; accent-color:var(--gold); }
+.ticket__trap{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+.ticket__error{ margin:0 0 14px; font-size:13px; color:#e08a74; }
+.ticket__error:empty{ display:none; }
+.ticket.is-done > :not(.ticket__done){ display:none; }
+.ticket__done{ text-align:center; }
+.ticket__done h3{ font-family:var(--font-display); font-size:26px; color:var(--white); margin:6px 0 10px; }
+.ticket__done p{ font-size:14px; line-height:1.6; color:var(--muted); margin:0 0 20px; }
+.ticket__done .btn + .btn{ margin-top:10px; }
+
 /* ============ GALLERY ============ */
 .gallery{ background:var(--charcoal); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline); }
 .gallery__grid{ display:grid; grid-template-columns:repeat(2,1fr); grid-auto-rows:150px; gap:14px; }
@@ -633,39 +651,53 @@ section{ position:relative; padding:88px 0; }
     <div class="section-head reveal">
       <div class="eyebrow">Reserva en segundos</div>
       <h2 class="section-title">Agenda tu <span class="gold-text">cita</span></h2>
-      <p class="section-desc">Tres pasos y listo. Confirmamos tu lugar directo por WhatsApp.</p>
+      <p class="section-desc">Elige servicio, día y hora libre. Tu lugar queda apartado al instante.</p>
     </div>
 
     <div class="booking__panel reveal">
       <div>
         <div class="booking__step">
-          <div class="step-head"><span class="step-num">01</span><h3>Elige tu servicio</h3></div>
+          <div class="step-head"><span class="step-num"></span><h3>Elige tu servicio</h3></div>
           <div class="service-picker" id="servicePicker"></div>
         </div>
+        <div class="booking__step" id="barberStep" hidden>
+          <div class="step-head"><span class="step-num"></span><h3>Elige tu barbero</h3></div>
+          <div class="service-picker" id="barberPicker"></div>
+        </div>
         <div class="booking__step">
-          <div class="step-head"><span class="step-num">02</span><h3>Elige el día</h3></div>
+          <div class="step-head"><span class="step-num"></span><h3>Elige el día</h3></div>
           <div class="days-row" id="daysRow"></div>
         </div>
         <div class="booking__step">
-          <div class="step-head"><span class="step-num">03</span><h3>Elige la hora</h3></div>
+          <div class="step-head"><span class="step-num"></span><h3>Elige la hora</h3></div>
           <div class="slots-grid" id="slotsGrid"></div>
         </div>
       </div>
 
-      <aside class="ticket">
+      <aside class="ticket" id="ticket">
         <span class="ticket__label">Tu cita</span>
         <dl class="ticket__rows">
           <div class="ticket__row"><dt>Servicio</dt><dd id="ticketService"></dd></div>
+          <div class="ticket__row" id="ticketBarberRow" hidden><dt>Barbero</dt><dd id="ticketBarber"></dd></div>
           <div class="ticket__row"><dt>Día</dt><dd id="ticketDay"></dd></div>
           <div class="ticket__row"><dt>Hora</dt><dd id="ticketTime"></dd></div>
           <div class="ticket__row ticket__row--total"><dt>Total</dt><dd id="ticketTotal"></dd></div>
         </dl>
-        <button class="btn btn--primary btn--block" id="reserveBtn" disabled>
-          <svg><use href="#icon-whatsapp"/></svg> Confirmar por WhatsApp
-        </button>
+        <form id="bookingForm" novalidate>
+          <div class="ticket__form">
+            <label>Tu nombre <input type="text" id="bookingName" autocomplete="name" maxlength="80" required></label>
+            <label>Tu WhatsApp (10 dígitos) <input type="tel" id="bookingPhone" autocomplete="tel" inputmode="numeric" maxlength="25" placeholder="55 1234 5678" required></label>
+            <label class="ticket__consent"><input type="checkbox" id="bookingConsent"> <span>Acepto recibir recordatorios de mi cita por WhatsApp.</span></label>
+            <label class="ticket__trap" aria-hidden="true">No llenar <input type="text" id="bookingWebsite" tabindex="-1" autocomplete="off"></label>
+          </div>
+          <p class="ticket__error" id="bookingError" role="alert"></p>
+          <button type="submit" class="btn btn--primary btn--block" id="reserveBtn" disabled>
+            <svg><use href="#icon-check"/></svg> Confirmar cita
+          </button>
+        </form>
         <div class="booking__disclaimer">
           <svg><use href="#icon-shield"/></svg>
-          <span>Los horarios mostrados son orientativos. Al reservar, confirmamos tu cita real de inmediato por WhatsApp.</span>
+          <span>Horarios en tiempo real: solo ves las horas que siguen libres en nuestra agenda.</span>
         </div>
       </aside>
     </div>
@@ -912,17 +944,14 @@ const CONFIG = {
     { id:'bigote', icon:'icon-comb', name:'Bigote', price:50, desc:'Recorte y perfilado de bigote a detalle.' },
     { id:'ceja', icon:'icon-star-badge', name:'Ceja', price:50, desc:'Limpieza y perfilado de ceja para un acabado definido.' },
   ],
-  bookingDays: 6, // Cuántos días próximos muestra la agenda (se calculan a partir de hoy)
-  // Disponibilidad simulada por día de la semana (dom, lun, mar, mie, jue, vie, sab).
-  // true = disponible, false = ocupado. Un día sin entrada se considera cerrado.
-  schedule: {
-    lun: { '10:00 AM':true,'11:00 AM':true,'12:00 PM':false,'1:00 PM':true,'2:00 PM':false,'3:00 PM':true,'4:00 PM':true,'5:00 PM':false },
-    mar: { '10:00 AM':false,'11:00 AM':true,'12:00 PM':true,'1:00 PM':false,'2:00 PM':true,'3:00 PM':true,'4:00 PM':false,'5:00 PM':true },
-    mie: { '10:00 AM':true,'11:00 AM':false,'12:00 PM':true,'1:00 PM':true,'2:00 PM':false,'3:00 PM':false,'4:00 PM':true,'5:00 PM':true },
-    jue: { '10:00 AM':true,'11:00 AM':true,'12:00 PM':false,'1:00 PM':true,'2:00 PM':true,'3:00 PM':false,'4:00 PM':true,'5:00 PM':false },
-    vie: { '10:00 AM':false,'11:00 AM':false,'12:00 PM':true,'1:00 PM':true,'2:00 PM':true,'3:00 PM':true,'4:00 PM':false,'5:00 PM':true },
-    sab: { '10:00 AM':true,'11:00 AM':true,'12:00 PM':true,'1:00 PM':false,'2:00 PM':false,'3:00 PM':true,'4:00 PM':true,'5:00 PM':true },
+  // La agenda lee las horas libres reales de Fluxsofy y guarda ahí la cita.
+  // slug = el enlace de reservas del negocio en Fluxsofy (Ajustes → Reservas en línea),
+  // por ejemplo "studio54" si el enlace es fluxsofy.com/r/studio54.
+  fluxsofy: {
+    api: "https://api.fluxsofy.com/api/public/booking",
+    slug: "fluxsofy-com-r-studio54",
   },
+  bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
   gallery: [
     { icon:'icon-scissors', title:'Cortes de Precisión', tag:'Cortes', big:true },
     { icon:'icon-razor', title:'Diseños de Barba', tag:'Barba' },
@@ -961,9 +990,8 @@ function renderServices(){
   $('#footerServices').innerHTML = CONFIG.services.slice(0,5).map(s => `<a href="#servicios">${s.name}</a>`).join('');
 
   $$('[data-book]').forEach(a => a.addEventListener('click', (e) => {
-    selectedService = e.currentTarget.getAttribute('data-book');
-    renderServicePicker();
-    updateSummary();
+    const service = CONFIG.services.find(s => s.id === e.currentTarget.getAttribute('data-book'));
+    if (service) selectServiceByName(service.name);
   }));
 }
 
@@ -1008,74 +1036,115 @@ function renderTestimonials(){
   `).join('');
 }
 
-/* ====================== AGENDA / BOOKING ====================== */
-const DAY_KEYS = ['dom','lun','mar','mie','jue','vie','sab'];
+/* ====================== AGENDA / BOOKING (conectada a Fluxsofy) ====================== */
+// Servicios, barberos y horas libres vienen de Fluxsofy; la cita se guarda
+// directo en su agenda. Si no responde, se invita a escribir por WhatsApp.
 const DAY_LABELS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const MONTH_LABELS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const BOOKING_URL = `${CONFIG.fluxsofy.api}/${encodeURIComponent(CONFIG.fluxsofy.slug)}`;
 
-const timeToMinutes = (t) => {
-  const [hm, period] = t.split(' ');
-  const [h, m] = hm.split(':').map(Number);
-  return ((h % 12) + (period === 'PM' ? 12 : 0)) * 60 + m;
-};
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-// Horarios de un día; los que ya pasaron hoy cuentan como ocupados.
-function slotsFor(day){
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return Object.entries(CONFIG.schedule[day.key]).map(([time, free]) =>
-    [time, free && !(day.isToday && timeToMinutes(time) <= nowMin)]);
+// "14:30" → "2:30 PM", como se muestra en el resto del sitio.
+function time12(t){
+  const [h, m] = t.split(':').map(Number);
+  return `${(h % 12) || 12}:${String(m).padStart(2,'0')} ${h < 12 ? 'AM' : 'PM'}`;
 }
-
-// Próximos días con servicio, a partir de hoy.
-function buildDays(){
-  const days = [];
-  const today = new Date();
-  for (let i = 0; days.length < CONFIG.bookingDays && i < 30; i++){
-    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-    const key = DAY_KEYS[date.getDay()];
-    if (!CONFIG.schedule[key]) continue;
-    const day = { id:i, key, date, isToday:i === 0 };
-    if (day.isToday && !slotsFor(day).some(([, free]) => free)) continue;
-    days.push(day);
-  }
-  return days;
+// "2026-10-19" → fecha local, sin desfase por zona horaria.
+function parseDay(ymd){
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
-
-const dayLong = (day) => {
-  const s = day.date.toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' });
+const dayLong = (date) => {
+  const s = date.toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-const bookingDays = buildDays();
-let selectedService = CONFIG.services[0].id;
-let selectedDay = bookingDays[0];
-let selectedTime = null;
+async function bookingApi(path = '', options){
+  let res;
+  try {
+    res = await fetch(BOOKING_URL + path, options);
+  } catch {
+    throw new Error('No pudimos conectar con la agenda. Revisa tu conexión e intenta de nuevo.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok){
+    const error = new Error(data.error || 'No pudimos conectar con la agenda.');
+    error.status = res.status;
+    throw error;
+  }
+  return data;
+}
+
+const booking = {
+  services: [], team: [], serviceId: null, barberId: '', days: [], day: null, time: null,
+  loading: true, error: null, submitting: false, requestId: 0,
+};
+const currentService = () => booking.services.find(s => s.id === booking.serviceId);
+const currentBarber = () => booking.team.find(m => m.id === booking.barberId);
+const isToday = (date) => date.toDateString() === new Date().toDateString();
+
+function notice(text, withWhatsapp){
+  const link = withWhatsapp ? ` <a href="${waLink(CONFIG.business.whatsappMessage)}" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>.` : '';
+  return `<p class="booking__notice">${esc(text)}${link}</p>`;
+}
+
+// Numera solo los pasos visibles (el de barbero aparece si hay más de uno).
+function numberSteps(){
+  $$('#agenda .booking__step:not([hidden]) .step-num').forEach((el, i) => { el.textContent = String(i + 1).padStart(2, '0'); });
+}
 
 function renderServicePicker(){
-  $('#servicePicker').innerHTML = CONFIG.services.map(s => `
-    <button class="pick ${s.id===selectedService?'is-active':''}" data-service="${s.id}" aria-pressed="${s.id===selectedService}">
-      <span>${s.name}</span><b>${priceFmt(s.price)}</b>
+  const picker = $('#servicePicker');
+  if (!booking.services.length){
+    picker.innerHTML = booking.error ? notice(booking.error, true) : notice('Cargando servicios…');
+    return;
+  }
+  picker.innerHTML = booking.services.map(s => `
+    <button class="pick ${s.id===booking.serviceId?'is-active':''}" data-service="${esc(s.id)}" aria-pressed="${s.id===booking.serviceId}">
+      <span>${esc(s.name)}</span><b>${priceFmt(s.price)}</b>
     </button>
   `).join('');
-  $$('.pick').forEach(btn => btn.addEventListener('click', () => {
-    selectedService = btn.getAttribute('data-service');
-    renderServicePicker();
-    updateSummary();
+  $$('#servicePicker .pick').forEach(btn => btn.addEventListener('click', () => selectService(btn.getAttribute('data-service'))));
+}
+
+function renderBarberPicker(){
+  const step = $('#barberStep');
+  step.hidden = booking.team.length < 2;
+  numberSteps();
+  if (step.hidden) return;
+  const options = [{ id:'', name:'Cualquiera disponible' }, ...booking.team];
+  $('#barberPicker').innerHTML = options.map(m => `
+    <button class="pick ${m.id===booking.barberId?'is-active':''}" data-barber="${esc(m.id)}" aria-pressed="${m.id===booking.barberId}">
+      <span>${esc(m.name)}</span>
+    </button>
+  `).join('');
+  $$('#barberPicker .pick').forEach(btn => btn.addEventListener('click', () => {
+    booking.barberId = btn.getAttribute('data-barber');
+    renderBarberPicker();
+    loadAvailability();
   }));
 }
 
 function renderDays(){
-  $('#daysRow').innerHTML = bookingDays.map(d => `
-    <button class="day-btn ${d===selectedDay?'is-active':''}" data-day="${d.id}" aria-pressed="${d===selectedDay}">
-      <span class="d1">${d.isToday ? 'Hoy' : DAY_LABELS[d.date.getDay()]}</span>
-      <span class="d2">${d.date.getDate()}</span>
-      <span class="d3">${MONTH_LABELS[d.date.getMonth()]}</span>
-    </button>
-  `).join('');
+  const row = $('#daysRow');
+  if (booking.loading){ row.innerHTML = notice('Buscando horas libres…'); return; }
+  if (booking.error){ row.innerHTML = notice(booking.error, true); return; }
+  if (!booking.days.length){ row.innerHTML = notice('No quedan horas libres en los próximos días.', true); return; }
+  row.innerHTML = booking.days.map(d => {
+    const date = parseDay(d.date);
+    const active = d === booking.day;
+    return `
+    <button class="day-btn ${active?'is-active':''}" data-day="${d.date}" aria-pressed="${active}">
+      <span class="d1">${isToday(date) ? 'Hoy' : DAY_LABELS[date.getDay()]}</span>
+      <span class="d2">${date.getDate()}</span>
+      <span class="d3">${MONTH_LABELS[date.getMonth()]}</span>
+    </button>`;
+  }).join('');
   $$('.day-btn').forEach(btn => btn.addEventListener('click', () => {
-    selectedDay = bookingDays.find(d => d.id === +btn.getAttribute('data-day'));
-    selectedTime = null;
+    booking.day = booking.days.find(d => d.date === btn.getAttribute('data-day'));
+    booking.time = null;
     renderDays();
     renderSlots();
     updateSummary();
@@ -1083,36 +1152,171 @@ function renderDays(){
 }
 
 function renderSlots(){
-  $('#slotsGrid').innerHTML = slotsFor(selectedDay).map(([time, available]) => {
-    const isSelected = available && time === selectedTime;
-    const cls = isSelected ? 'slot--selected' : (available ? 'slot--available' : 'slot--busy');
-    return `<button class="slot ${cls}" data-time="${time}" aria-pressed="${isSelected}" ${available?'':'disabled aria-label="'+time+', ocupado"'}>${time}</button>`;
+  const grid = $('#slotsGrid');
+  if (!booking.day){ grid.innerHTML = ''; return; }
+  grid.innerHTML = booking.day.times.map(t => {
+    const selected = t === booking.time;
+    return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
   }).join('');
-
-  $$('.slot--available, .slot--selected').forEach(btn => btn.addEventListener('click', () => {
-    selectedTime = btn.getAttribute('data-time');
+  $$('.slot').forEach(btn => btn.addEventListener('click', () => {
+    booking.time = btn.getAttribute('data-time');
     renderSlots();
     updateSummary();
   }));
 }
 
-function updateSummary(){
-  const service = CONFIG.services.find(s => s.id === selectedService);
-  const timeEl = $('#ticketTime');
-  $('#ticketService').textContent = service.name;
-  $('#ticketDay').textContent = dayLong(selectedDay);
-  timeEl.textContent = selectedTime || 'Elige una hora';
-  timeEl.classList.toggle('is-empty', !selectedTime);
-  $('#ticketTotal').textContent = priceFmt(service.price);
-  $('#reserveBtn').disabled = !selectedTime;
+function setText(sel, text, empty){
+  const el = $(sel);
+  el.textContent = text;
+  el.classList.toggle('is-empty', !!empty);
 }
 
-$('#reserveBtn').addEventListener('click', () => {
-  if (!selectedTime) return;
-  const service = CONFIG.services.find(s => s.id === selectedService);
-  const msg = `Hola, me gustaría agendar una cita en la barbería.\nServicio: ${service.name}\nDía: ${dayLong(selectedDay)}\nHora: ${selectedTime}`;
-  window.open(waLink(msg), '_blank', 'noopener');
-  showToast('¡Listo! Te redirigimos a WhatsApp para confirmar tu cita.');
+function updateSummary(){
+  const service = currentService();
+  setText('#ticketService', service ? service.name : '—', !service);
+  $('#ticketBarberRow').hidden = booking.team.length < 2;
+  setText('#ticketBarber', currentBarber() ? currentBarber().name : 'Cualquiera disponible');
+  setText('#ticketDay', booking.day ? dayLong(parseDay(booking.day.date)) : 'Elige un día', !booking.day);
+  setText('#ticketTime', booking.time ? time12(booking.time) : 'Elige una hora', !booking.time);
+  $('#ticketTotal').textContent = service ? priceFmt(service.price) : '—';
+  $('#reserveBtn').disabled = !(service && booking.day && booking.time) || booking.submitting;
+}
+
+function selectService(id){
+  if (!booking.services.some(s => s.id === id)) return;
+  booking.serviceId = id;
+  renderServicePicker();
+  loadAvailability();
+}
+
+// Botones "Reservar" del catálogo: se busca el servicio de Fluxsofy con el mismo nombre.
+function selectServiceByName(name){
+  const match = booking.services.find(s => normalize(s.name) === normalize(name));
+  if (match) selectService(match.id);
+}
+
+async function loadAvailability(){
+  const requestId = ++booking.requestId;
+  booking.loading = true;
+  booking.error = null;
+  renderDays();
+  renderSlots();
+  updateSummary();
+  try {
+    const params = new URLSearchParams({ serviceTypeId: booking.serviceId });
+    if (booking.barberId) params.set('barberId', booking.barberId);
+    const data = await bookingApi(`/availability?${params}`);
+    if (requestId !== booking.requestId) return; // ya se pidió otra combinación
+    const previous = booking.day && booking.day.date;
+    booking.days = data.days.filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
+    booking.day = booking.days.find(d => d.date === previous) || booking.days[0] || null;
+    if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
+  } catch (error){
+    if (requestId !== booking.requestId) return;
+    booking.days = [];
+    booking.day = null;
+    booking.time = null;
+    booking.error = error.message;
+  }
+  booking.loading = false;
+  renderDays();
+  renderSlots();
+  updateSummary();
+}
+
+async function initBooking(){
+  renderServicePicker();
+  renderDays();
+  updateSummary();
+  numberSteps();
+  try {
+    if (!CONFIG.fluxsofy.slug) throw new Error('La agenda en línea aún no está activa.');
+    const profile = await bookingApi();
+    // Mismo orden que el catálogo del sitio; los servicios nuevos van al final.
+    const order = CONFIG.services.map(s => normalize(s.name));
+    const rank = (s) => { const i = order.indexOf(normalize(s.name)); return i === -1 ? order.length : i; };
+    booking.services = profile.services.slice().sort((a, b) => rank(a) - rank(b));
+    booking.team = profile.team;
+    if (!booking.services.length) throw new Error('Por ahora no hay servicios disponibles en línea.');
+    booking.serviceId = booking.services[0].id;
+  } catch (error){
+    booking.error = error.status === 404 ? 'La agenda en línea no está disponible en este momento.' : error.message;
+    booking.loading = false;
+    renderServicePicker();
+    renderDays();
+    updateSummary();
+    return;
+  }
+  renderServicePicker();
+  renderBarberPicker();
+  loadAvailability();
+}
+
+function showBookingDone(result, day, time){
+  const ticket = $('#ticket');
+  const when = `${dayLong(parseDay(day))} a las ${time12(time)}`;
+  const msg = `Hola, acabo de reservar en línea.\nServicio: ${result.service.name}\nCon: ${result.professional}\nDía: ${when}`;
+  let done = $('#ticketDone');
+  if (!done){
+    done = document.createElement('div');
+    done.id = 'ticketDone';
+    done.className = 'ticket__done';
+    ticket.appendChild(done);
+  }
+  done.innerHTML = `
+    <span class="ticket__label">Reserva confirmada</span>
+    <h3>¡Te esperamos!</h3>
+    <p>${esc(result.service.name)} con ${esc(result.professional)}<br>${esc(when)}</p>
+    <a class="btn btn--primary btn--block" href="${waLink(msg)}" target="_blank" rel="noopener"><svg><use href="#icon-whatsapp"/></svg> Avisar por WhatsApp</a>
+    <button type="button" class="btn btn--secondary btn--block" id="bookAgainBtn">Agendar otra cita</button>`;
+  ticket.classList.add('is-done');
+  $('#bookAgainBtn').addEventListener('click', () => {
+    ticket.classList.remove('is-done');
+    $('#bookingForm').reset();
+  });
+}
+
+$('#bookingForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const service = currentService();
+  if (!service || !booking.day || !booking.time || booking.submitting) return;
+  const errorEl = $('#bookingError');
+  const name = $('#bookingName').value.trim();
+  const phone = $('#bookingPhone').value.trim();
+  if (name.length < 2){ errorEl.textContent = 'Escribe tu nombre.'; $('#bookingName').focus(); return; }
+  if (phone.replace(/\D/g, '').length < 10){ errorEl.textContent = 'Escribe tu WhatsApp a 10 dígitos.'; $('#bookingPhone').focus(); return; }
+  errorEl.textContent = '';
+  booking.submitting = true;
+  updateSummary();
+  const day = booking.day.date;
+  const time = booking.time;
+  try {
+    const result = await bookingApi('/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serviceTypeId: service.id,
+        barberId: booking.barberId || null,
+        date: day,
+        time,
+        name,
+        phone,
+        whatsappConsent: $('#bookingConsent').checked,
+        website: $('#bookingWebsite').value,
+      }),
+    });
+    showBookingDone(result, day, time);
+    showToast('¡Listo! Tu cita quedó registrada.');
+    booking.time = null;
+    loadAvailability();
+  } catch (error){
+    errorEl.textContent = error.message;
+    // Si alguien más tomó la hora, se refrescan las horas libres.
+    if (error.status === 409) loadAvailability();
+  } finally {
+    booking.submitting = false;
+    updateSummary();
+  }
 });
 
 /* ====================== VIDEO DE PORTADA ====================== */
@@ -1234,10 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderServices();
   renderGallery();
   renderTestimonials();
-  renderServicePicker();
-  renderDays();
-  renderSlots();
-  updateSummary();
+  initBooking();
   wireWhatsappLinks();
   observeReveals();
   onScroll();
