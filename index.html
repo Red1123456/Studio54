@@ -708,7 +708,7 @@ section{ position:relative; padding:88px 0; }
         </form>
         <div class="booking__disclaimer">
           <svg><use href="#icon-shield"/></svg>
-          <span>Horarios en tiempo real: solo ves las horas que siguen libres en nuestra agenda.</span>
+          <span>Horarios en tiempo real: las horas tachadas ya están ocupadas en nuestra agenda.</span>
         </div>
       </aside>
     </div>
@@ -964,7 +964,8 @@ const CONFIG = {
   },
   bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
   // Solo se ofrecen citas que empiecen dentro de este horario (formato 24 h).
-  bookingHours: { from: "11:00", to: "20:00" },
+  // La agenda muestra una hora cada "step" minutos; las ocupadas salen tachadas.
+  bookingHours: { from: "11:00", to: "20:00", step: 60 },
   // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
   // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
   barbers: [
@@ -1184,14 +1185,27 @@ function renderDays(){
   }));
 }
 
+// Todas las horas del horario ("11:00", "12:00", …), libres u ocupadas.
+function allSlots(){
+  const { from, to, step } = CONFIG.bookingHours;
+  const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const slots = [];
+  for (let m = toMin(from); m < toMin(to); m += step){
+    slots.push(`${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`);
+  }
+  return slots;
+}
+
 function renderSlots(){
   const grid = $('#slotsGrid');
   if (!booking.day){ grid.innerHTML = ''; return; }
-  grid.innerHTML = booking.day.times.map(t => {
+  const free = booking.day.times;
+  grid.innerHTML = [...new Set([...allSlots(), ...free])].sort().map(t => {
+    if (!free.includes(t)) return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ocupada">${time12(t)}</button>`;
     const selected = t === booking.time;
     return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
   }).join('');
-  $$('.slot').forEach(btn => btn.addEventListener('click', () => {
+  $$('.slot:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
     booking.time = btn.getAttribute('data-time');
     renderSlots();
     updateSummary();
