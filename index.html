@@ -53,8 +53,8 @@
   "areaServed": { "@type": "City", "name": "Coatzacoalcos" },
   "hasMap": "https://www.google.com/maps/search/?api=1&query=Studio+54+Barber%C3%ADa+Jos%C3%A9+Luis+Cuevas+505+Coatzacoalcos",
   "openingHoursSpecification": [
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "10:00", "closes": "20:00" },
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "18:00" }
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "11:00", "closes": "20:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "11:00", "closes": "20:00" }
   ]
 }
 </script>
@@ -832,7 +832,7 @@ section{ position:relative; padding:88px 0; }
         </div>
         <div class="info-card">
           <div class="info-card__icon"><svg><use href="#icon-clock"/></svg></div>
-          <div><b>Horarios</b><p>Lunes a Viernes · 10:00 – 20:00<br>Sábado · 9:00 – 18:00<br>Domingo · Cerrado</p></div>
+          <div><b>Horarios</b><p>Lunes a Sábado · 11:00 AM – 8:00 PM<br>Domingo · Cerrado</p></div>
         </div>
         <div class="info-card">
           <div class="info-card__icon"><svg><use href="#icon-phone"/></svg></div>
@@ -902,7 +902,7 @@ section{ position:relative; padding:88px 0; }
         <ul class="footer__contact">
           <li><svg><use href="#icon-pin"/></svg> José Luis Cuevas 505, Col. Paraíso, Coatzacoalcos, Ver.</li>
           <li><svg><use href="#icon-phone"/></svg> +52 1 921 260 0164</li>
-          <li><svg><use href="#icon-clock"/></svg> Lun–Sáb · 9:00–20:00</li>
+          <li><svg><use href="#icon-clock"/></svg> Lun–Sáb · 11:00 AM–8:00 PM</li>
         </ul>
         <a href="#" class="btn btn--ghost-light btn--sm" id="footerWhatsapp"><svg><use href="#icon-whatsapp"/></svg> WhatsApp</a>
       </div>
@@ -946,7 +946,7 @@ const CONFIG = {
     whatsapp: "5219212600164", // Formato internacional sin '+' ni espacios
     whatsappMessage: "Hola, me gustaría agendar una cita en la barbería.",
     address: "José Luis Cuevas 505, Col. Paraíso, Coatzacoalcos, Ver., CP 96523",
-    hours: "Lunes a Viernes 10:00–20:00 · Sábado 9:00–18:00 · Domingo cerrado",
+    hours: "Lunes a Sábado 11:00 AM–8:00 PM · Domingo cerrado",
   },
   services: [
     { id:'corte-general', icon:'icon-scissors', name:'Corte General', price:250, desc:'Corte a tijera y máquina + acabado profesional con toalla caliente.' },
@@ -963,6 +963,8 @@ const CONFIG = {
     slug: "fluxsofy-com-r-studio54",
   },
   bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
+  // Solo se ofrecen citas que empiecen dentro de este horario (formato 24 h).
+  bookingHours: { from: "11:00", to: "20:00" },
   // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
   // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
   barbers: [
@@ -1239,7 +1241,10 @@ async function loadAvailability(){
     const data = await bookingApi(`/availability?${params}`);
     if (requestId !== booking.requestId) return; // ya se pidió otra combinación
     const previous = booking.day && booking.day.date;
-    booking.days = data.days.filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
+    const { from, to } = CONFIG.bookingHours;
+    booking.days = data.days
+      .map(d => ({ ...d, times: (d.times || []).filter(t => t >= from && t < to) }))
+      .filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
     booking.day = booking.days.find(d => d.date === previous) || booking.days[0] || null;
     if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
   } catch (error){
