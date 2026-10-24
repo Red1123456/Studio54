@@ -1194,7 +1194,8 @@ function renderDays(){
 // dice qué horas siguen libres, así que el horario se arma juntando las horas
 // libres de todos los barberos: de la primera hora que abre la agenda a la
 // última que se ofrece ese día. Un día sin ninguna hora libre usa el horario
-// más amplio de la semana.
+// más amplio de la semana. Hoy empieza en la primera hora que aún se puede
+// reservar: lo anterior ya pasó y no se muestra, igual que en Fluxsofy.
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const fromMin = (m) => `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
 function buildSchedule(responses){
@@ -1207,8 +1208,9 @@ function buildSchedule(responses){
   Object.entries(known).forEach(([date, set]) => {
     const times = [...set].sort();
     const closes = times.length ? toMin(times.at(-1)) : latest;
+    const start = isToday(parseDay(date)) && times.length ? toMin(times[0]) : opens;
     const grid = [];
-    for (let m = opens; m <= closes; m += CONFIG.slotStep) grid.push(fromMin(m));
+    for (let m = start; m <= closes; m += CONFIG.slotStep) grid.push(fromMin(m));
     schedule[date] = [...new Set([...grid, ...times])].sort();
   });
   return schedule;
