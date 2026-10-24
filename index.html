@@ -369,6 +369,9 @@ section{ position:relative; padding:88px 0; }
 .day-btn:hover{ border-color:var(--hairline-strong); }
 .day-btn.is-active{ background:rgba(201,162,75,.1); border-color:var(--gold); }
 .day-btn.is-active .d1{ color:var(--gold-light); }
+.day-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.day-btn:disabled:hover{ border-color:var(--hairline); }
+.day-btn--full .d3, .day-btn:disabled .d3{ color:var(--muted); }
 
 .slots-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 @media(min-width:520px){ .slots-grid{ grid-template-columns:repeat(4,1fr); } }
@@ -962,7 +965,7 @@ const CONFIG = {
     api: "https://api.fluxsofy.com/api/public/booking",
     slug: "fluxsofy-com-r-studio54",
   },
-  bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
+  bookingDays: 12, // Máximo de días que muestra la agenda (Fluxsofy decide cuántos abre)
   // El horario de cada día sale de Fluxsofy. La agenda muestra una hora cada
   // "slotStep" minutos y tacha las que Fluxsofy ya no tiene libres.
   slotStep: 60,
@@ -1102,7 +1105,7 @@ async function bookingApi(path = '', options){
 
 const booking = {
   services: [], team: [], serviceId: null, barberId: '', days: [], day: null, time: null,
-  opens: null, loading: true, error: null, submitting: false, requestId: 0,
+  loading: true, error: null, submitting: false, requestId: 0,
 };
 const currentService = () => booking.services.find(s => s.id === booking.serviceId);
 const currentBarber = () => booking.team.find(m => m.id === booking.barberId);
@@ -1165,18 +1168,20 @@ function renderDays(){
   const row = $('#daysRow');
   if (booking.loading){ row.innerHTML = notice('Buscando horas libres…'); return; }
   if (booking.error){ row.innerHTML = notice(booking.error, true); return; }
-  if (!booking.days.length){ row.innerHTML = notice('No quedan horas libres en los próximos días.', true); return; }
+  if (!booking.days.length){ row.innerHTML = notice('No hay días abiertos en la agenda por ahora.', true); return; }
   row.innerHTML = booking.days.map(d => {
     const date = parseDay(d.date);
     const active = d === booking.day;
+    const full = !d.closed && !d.times.length;
+    const note = d.closed ? 'Cerrado' : full ? 'Lleno' : MONTH_LABELS[date.getMonth()];
     return `
-    <button class="day-btn ${active?'is-active':''}" data-day="${d.date}" aria-pressed="${active}">
+    <button class="day-btn ${active?'is-active':''} ${full?'day-btn--full':''}" data-day="${d.date}" aria-pressed="${active}" ${d.closed ? 'disabled' : ''}>
       <span class="d1">${isToday(date) ? 'Hoy' : DAY_LABELS[date.getDay()]}</span>
       <span class="d2">${date.getDate()}</span>
-      <span class="d3">${MONTH_LABELS[date.getMonth()]}</span>
+      <span class="d3">${note}</span>
     </button>`;
   }).join('');
-  $$('.day-btn').forEach(btn => btn.addEventListener('click', () => {
+  $$('.day-btn:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
     booking.day = booking.days.find(d => d.date === btn.getAttribute('data-day'));
     booking.time = null;
     renderDays();
@@ -1185,22 +1190,38 @@ function renderDays(){
   }));
 }
 
-// Horas del día según Fluxsofy, libres u ocupadas: desde la primera hora que
-// abre la agenda hasta la última que Fluxsofy ofrece ese día.
-function allSlots(day){
-  const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-  const slots = [];
-  for (let m = toMin(booking.opens); m <= toMin(day.times.at(-1)); m += CONFIG.slotStep){
-    slots.push(`${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`);
-  }
-  return slots;
+// Horario de cada día según Fluxsofy, con horas libres y ocupadas. Fluxsofy solo
+// dice qué horas siguen libres, así que el horario se arma juntando las horas
+// libres de todos los barberos: de la primera hora que abre la agenda a la
+// última que se ofrece ese día. Un día sin ninguna hora libre usa el horario
+// más amplio de la semana.
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const fromMin = (m) => `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
+function buildSchedule(responses){
+  const known = {};
+  responses.forEach(r => r.days.forEach(d => { (known[d.date] ||= new Set()); d.times.forEach(t => known[d.date].add(t)); }));
+  const all = Object.values(known).flatMap(set => [...set]).sort();
+  if (!all.length) return {};
+  const opens = toMin(all[0]), latest = toMin(all.at(-1));
+  const schedule = {};
+  Object.entries(known).forEach(([date, set]) => {
+    const times = [...set].sort();
+    const closes = times.length ? toMin(times.at(-1)) : latest;
+    const grid = [];
+    for (let m = opens; m <= closes; m += CONFIG.slotStep) grid.push(fromMin(m));
+    schedule[date] = [...new Set([...grid, ...times])].sort();
+  });
+  return schedule;
 }
 
 function renderSlots(){
   const grid = $('#slotsGrid');
   if (!booking.day){ grid.innerHTML = ''; return; }
   const free = booking.day.times;
-  grid.innerHTML = [...new Set([...allSlots(booking.day), ...free])].sort().map(t => {
+  // Las horas sueltas (ej. 4:45) solo se muestran si están libres.
+  const start = toMin(booking.day.slots[0] || '00:00');
+  const onGrid = (t) => (toMin(t) - start) % CONFIG.slotStep === 0;
+  grid.innerHTML = booking.day.slots.filter(t => free.includes(t) || onGrid(t)).map(t => {
     if (!free.includes(t)) return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ocupada">${time12(t)}</button>`;
     const selected = t === booking.time;
     return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
@@ -1250,14 +1271,23 @@ async function loadAvailability(){
   renderSlots();
   updateSummary();
   try {
-    const params = new URLSearchParams({ serviceTypeId: booking.serviceId });
-    if (booking.barberId) params.set('barberId', booking.barberId);
-    const data = await bookingApi(`/availability?${params}`);
+    const availability = (barberId) => {
+      const params = new URLSearchParams({ serviceTypeId: booking.serviceId });
+      if (barberId) params.set('barberId', barberId);
+      return bookingApi(`/availability?${params}`);
+    };
+    // La agenda general y la de cada barbero: juntas dan el horario completo.
+    const [data, ...perBarber] = await Promise.all([
+      availability(booking.barberId),
+      ...booking.team.map(m => availability(m.id).catch(() => null)),
+    ]);
     if (requestId !== booking.requestId) return; // ya se pidió otra combinación
+    const schedule = buildSchedule([data, ...perBarber.filter(Boolean)]);
     const previous = booking.day && booking.day.date;
-    booking.days = data.days.filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
-    booking.opens = booking.days.map(d => d.times[0]).sort()[0];
-    booking.day = booking.days.find(d => d.date === previous) || booking.days[0] || null;
+    booking.days = data.days.slice(0, CONFIG.bookingDays)
+      .map(d => ({ ...d, slots: d.closed ? [] : (schedule[d.date] || d.times) }));
+    const open = booking.days.filter(d => !d.closed);
+    booking.day = open.find(d => d.date === previous) || open.find(d => d.times.length) || open[0] || null;
     if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
   } catch (error){
     if (requestId !== booking.requestId) return;
