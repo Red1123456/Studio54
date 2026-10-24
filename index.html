@@ -53,8 +53,8 @@
   "areaServed": { "@type": "City", "name": "Coatzacoalcos" },
   "hasMap": "https://www.google.com/maps/search/?api=1&query=Studio+54+Barber%C3%ADa+Jos%C3%A9+Luis+Cuevas+505+Coatzacoalcos",
   "openingHoursSpecification": [
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "11:00", "closes": "20:00" },
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "11:00", "closes": "20:00" }
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], "opens": "11:00", "closes": "20:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "11:00", "closes": "18:00" }
   ]
 }
 </script>
@@ -835,7 +835,7 @@ section{ position:relative; padding:88px 0; }
         </div>
         <div class="info-card">
           <div class="info-card__icon"><svg><use href="#icon-clock"/></svg></div>
-          <div><b>Horarios</b><p>Lunes a Sábado · 11:00 AM – 8:00 PM<br>Domingo · Cerrado</p></div>
+          <div><b>Horarios</b><p id="contactHours">Lunes a Sábado · 11:00 AM – 8:00 PM<br>Domingo · 11:00 AM – 6:00 PM</p></div>
         </div>
         <div class="info-card">
           <div class="info-card__icon"><svg><use href="#icon-phone"/></svg></div>
@@ -905,7 +905,7 @@ section{ position:relative; padding:88px 0; }
         <ul class="footer__contact">
           <li><svg><use href="#icon-pin"/></svg> José Luis Cuevas 505, Col. Paraíso, Coatzacoalcos, Ver.</li>
           <li><svg><use href="#icon-phone"/></svg> +52 1 921 260 0164</li>
-          <li><svg><use href="#icon-clock"/></svg> Lun–Sáb · 11:00 AM–8:00 PM</li>
+          <li><svg><use href="#icon-clock"/></svg> <span id="footerHours">Lun–Sáb · 11:00 AM–8:00 PM<br>Dom · 11:00 AM–6:00 PM</span></li>
         </ul>
         <a href="#" class="btn btn--ghost-light btn--sm" id="footerWhatsapp"><svg><use href="#icon-whatsapp"/></svg> WhatsApp</a>
       </div>
@@ -949,7 +949,6 @@ const CONFIG = {
     whatsapp: "5219212600164", // Formato internacional sin '+' ni espacios
     whatsappMessage: "Hola, me gustaría agendar una cita en la barbería.",
     address: "José Luis Cuevas 505, Col. Paraíso, Coatzacoalcos, Ver., CP 96523",
-    hours: "Lunes a Sábado 11:00 AM–8:00 PM · Domingo cerrado",
   },
   services: [
     { id:'corte-general', icon:'icon-scissors', name:'Corte General', price:250, desc:'Corte a tijera y máquina + acabado profesional con toalla caliente.' },
@@ -966,9 +965,8 @@ const CONFIG = {
     slug: "fluxsofy-com-r-studio54",
   },
   bookingDays: 12, // Máximo de días que muestra la agenda (Fluxsofy decide cuántos abre)
-  // El horario de cada día sale de Fluxsofy. La agenda muestra una hora cada
-  // "slotStep" minutos y tacha las que Fluxsofy ya no tiene libres.
-  slotStep: 60,
+  // El horario de atención y el estado de cada hora salen de Fluxsofy; los textos
+  // de horario de la página se reemplazan con el horario que tenga Fluxsofy.
   // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
   // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
   barbers: [
@@ -1164,6 +1162,11 @@ function renderBarberPicker(){
   }));
 }
 
+// Estado del día en Fluxsofy: open, full (sin horas libres), closed (el negocio
+// no abre) u off (el barbero elegido no trabaja). Solo open y full se pueden abrir.
+const DAY_NOTES = { full:'Lleno', closed:'Cerrado', off:'Descansa' };
+const isDayOpen = (d) => d.status === 'open' || d.status === 'full';
+
 function renderDays(){
   const row = $('#daysRow');
   if (booking.loading){ row.innerHTML = notice('Buscando horas libres…'); return; }
@@ -1172,10 +1175,10 @@ function renderDays(){
   row.innerHTML = booking.days.map(d => {
     const date = parseDay(d.date);
     const active = d === booking.day;
-    const full = !d.closed && !d.times.length;
-    const note = d.closed ? 'Cerrado' : full ? 'Lleno' : MONTH_LABELS[date.getMonth()];
+    const full = d.status === 'full';
+    const note = DAY_NOTES[d.status] || MONTH_LABELS[date.getMonth()];
     return `
-    <button class="day-btn ${active?'is-active':''} ${full?'day-btn--full':''}" data-day="${d.date}" aria-pressed="${active}" ${d.closed ? 'disabled' : ''}>
+    <button class="day-btn ${active?'is-active':''} ${full?'day-btn--full':''}" data-day="${d.date}" aria-pressed="${active}" ${isDayOpen(d) ? '' : 'disabled'}>
       <span class="d1">${isToday(date) ? 'Hoy' : DAY_LABELS[date.getDay()]}</span>
       <span class="d2">${date.getDate()}</span>
       <span class="d3">${note}</span>
@@ -1190,41 +1193,13 @@ function renderDays(){
   }));
 }
 
-// Horario de cada día según Fluxsofy, con horas libres y ocupadas. Fluxsofy solo
-// dice qué horas siguen libres, así que el horario se arma juntando las horas
-// libres de todos los barberos: de la primera hora que abre la agenda a la
-// última que se ofrece ese día. Un día sin ninguna hora libre usa el horario
-// más amplio de la semana. Hoy empieza en la primera hora que aún se puede
-// reservar: lo anterior ya pasó y no se muestra, igual que en Fluxsofy.
-const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-const fromMin = (m) => `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
-function buildSchedule(responses){
-  const known = {};
-  responses.forEach(r => r.days.forEach(d => { (known[d.date] ||= new Set()); d.times.forEach(t => known[d.date].add(t)); }));
-  const all = Object.values(known).flatMap(set => [...set]).sort();
-  if (!all.length) return {};
-  const opens = toMin(all[0]), latest = toMin(all.at(-1));
-  const schedule = {};
-  Object.entries(known).forEach(([date, set]) => {
-    const times = [...set].sort();
-    const closes = times.length ? toMin(times.at(-1)) : latest;
-    const start = isToday(parseDay(date)) && times.length ? toMin(times[0]) : opens;
-    const grid = [];
-    for (let m = start; m <= closes; m += CONFIG.slotStep) grid.push(fromMin(m));
-    schedule[date] = [...new Set([...grid, ...times])].sort();
-  });
-  return schedule;
-}
-
 function renderSlots(){
   const grid = $('#slotsGrid');
   if (!booking.day){ grid.innerHTML = ''; return; }
-  const free = booking.day.times;
-  // Las horas sueltas (ej. 4:45) solo se muestran si están libres.
-  const start = toMin(booking.day.slots[0] || '00:00');
-  const onGrid = (t) => (toMin(t) - start) % CONFIG.slotStep === 0;
-  grid.innerHTML = booking.day.slots.filter(t => free.includes(t) || onGrid(t)).map(t => {
-    if (!free.includes(t)) return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ocupada">${time12(t)}</button>`;
+  // Las horas que ya pasaron o en que el barbero no trabaja no se muestran;
+  // las ocupadas o bloqueadas salen tachadas.
+  grid.innerHTML = booking.day.slots.filter(s => s.status !== 'past' && s.status !== 'off').map(({ time: t, status }) => {
+    if (status !== 'available') return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ${status === 'blocked' ? 'bloqueada' : 'ocupada'}">${time12(t)}</button>`;
     const selected = t === booking.time;
     return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
   }).join('');
@@ -1273,22 +1248,13 @@ async function loadAvailability(){
   renderSlots();
   updateSummary();
   try {
-    const availability = (barberId) => {
-      const params = new URLSearchParams({ serviceTypeId: booking.serviceId });
-      if (barberId) params.set('barberId', barberId);
-      return bookingApi(`/availability?${params}`);
-    };
-    // La agenda general y la de cada barbero: juntas dan el horario completo.
-    const [data, ...perBarber] = await Promise.all([
-      availability(booking.barberId),
-      ...booking.team.map(m => availability(m.id).catch(() => null)),
-    ]);
+    const params = new URLSearchParams({ serviceTypeId: booking.serviceId });
+    if (booking.barberId) params.set('barberId', booking.barberId);
+    const data = await bookingApi(`/availability?${params}`);
     if (requestId !== booking.requestId) return; // ya se pidió otra combinación
-    const schedule = buildSchedule([data, ...perBarber.filter(Boolean)]);
     const previous = booking.day && booking.day.date;
-    booking.days = data.days.slice(0, CONFIG.bookingDays)
-      .map(d => ({ ...d, slots: d.closed ? [] : (schedule[d.date] || d.times) }));
-    const open = booking.days.filter(d => !d.closed);
+    booking.days = data.days.slice(0, CONFIG.bookingDays);
+    const open = booking.days.filter(isDayOpen);
     booking.day = open.find(d => d.date === previous) || open.find(d => d.times.length) || open[0] || null;
     if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
   } catch (error){
@@ -1304,6 +1270,23 @@ async function loadAvailability(){
   updateSummary();
 }
 
+// Textos de horario (contacto y pie de página) con el horario de atención de
+// Fluxsofy. Junta los días seguidos que abren a la misma hora, de lunes a domingo.
+const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+function renderHours(schedule){
+  const days = [1,2,3,4,5,6,0].map(w => schedule.days.find(d => d.weekday === w)).filter(Boolean);
+  const hoursOf = (d) => d.open ? `${time12(d.opens)} – ${time12(d.closes)}` : 'Cerrado';
+  const groups = [];
+  days.forEach(d => {
+    const last = groups.at(-1);
+    if (last && last.hours === hoursOf(d)) last.to = d.weekday;
+    else groups.push({ from: d.weekday, to: d.weekday, hours: hoursOf(d) });
+  });
+  const line = (g, names) => `${names[g.from]}${g.from === g.to ? '' : ' a ' + names[g.to]} · ${g.hours}`;
+  $('#contactHours').innerHTML = groups.map(g => esc(line(g, DAY_NAMES))).join('<br>');
+  $('#footerHours').innerHTML = groups.map(g => esc(line(g, DAY_LABELS))).join('<br>');
+}
+
 async function initBooking(){
   renderServicePicker();
   renderDays();
@@ -1317,6 +1300,7 @@ async function initBooking(){
     const rank = (s) => { const i = order.indexOf(normalize(s.name)); return i === -1 ? order.length : i; };
     booking.services = profile.services.slice().sort((a, b) => rank(a) - rank(b));
     booking.team = profile.team;
+    if (profile.schedule) renderHours(profile.schedule);
     if (!booking.services.length) throw new Error('Por ahora no hay servicios disponibles en línea.');
     booking.serviceId = booking.services[0].id;
   } catch (error){
