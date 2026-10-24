@@ -963,9 +963,9 @@ const CONFIG = {
     slug: "fluxsofy-com-r-studio54",
   },
   bookingDays: 12, // Máximo de días con horas libres que muestra la agenda
-  // Solo se ofrecen citas que empiecen dentro de este horario (formato 24 h).
-  // La agenda muestra una hora cada "step" minutos; las ocupadas salen tachadas.
-  bookingHours: { from: "11:00", to: "20:00", step: 60 },
+  // El horario de cada día sale de Fluxsofy. La agenda muestra una hora cada
+  // "slotStep" minutos y tacha las que Fluxsofy ya no tiene libres.
+  slotStep: 60,
   // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
   // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
   barbers: [
@@ -1102,7 +1102,7 @@ async function bookingApi(path = '', options){
 
 const booking = {
   services: [], team: [], serviceId: null, barberId: '', days: [], day: null, time: null,
-  loading: true, error: null, submitting: false, requestId: 0,
+  opens: null, loading: true, error: null, submitting: false, requestId: 0,
 };
 const currentService = () => booking.services.find(s => s.id === booking.serviceId);
 const currentBarber = () => booking.team.find(m => m.id === booking.barberId);
@@ -1185,12 +1185,12 @@ function renderDays(){
   }));
 }
 
-// Todas las horas del horario ("11:00", "12:00", …), libres u ocupadas.
-function allSlots(){
-  const { from, to, step } = CONFIG.bookingHours;
+// Horas del día según Fluxsofy, libres u ocupadas: desde la primera hora que
+// abre la agenda hasta la última que Fluxsofy ofrece ese día.
+function allSlots(day){
   const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const slots = [];
-  for (let m = toMin(from); m < toMin(to); m += step){
+  for (let m = toMin(booking.opens); m <= toMin(day.times.at(-1)); m += CONFIG.slotStep){
     slots.push(`${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`);
   }
   return slots;
@@ -1200,7 +1200,7 @@ function renderSlots(){
   const grid = $('#slotsGrid');
   if (!booking.day){ grid.innerHTML = ''; return; }
   const free = booking.day.times;
-  grid.innerHTML = [...new Set([...allSlots(), ...free])].sort().map(t => {
+  grid.innerHTML = [...new Set([...allSlots(booking.day), ...free])].sort().map(t => {
     if (!free.includes(t)) return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ocupada">${time12(t)}</button>`;
     const selected = t === booking.time;
     return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
@@ -1255,10 +1255,8 @@ async function loadAvailability(){
     const data = await bookingApi(`/availability?${params}`);
     if (requestId !== booking.requestId) return; // ya se pidió otra combinación
     const previous = booking.day && booking.day.date;
-    const { from, to } = CONFIG.bookingHours;
-    booking.days = data.days
-      .map(d => ({ ...d, times: (d.times || []).filter(t => t >= from && t < to) }))
-      .filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
+    booking.days = data.days.filter(d => !d.closed && d.times.length).slice(0, CONFIG.bookingDays);
+    booking.opens = booking.days.map(d => d.times[0]).sort()[0];
     booking.day = booking.days.find(d => d.date === previous) || booking.days[0] || null;
     if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
   } catch (error){
