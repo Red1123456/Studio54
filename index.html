@@ -1192,13 +1192,15 @@ function renderDays(){
   }));
 }
 
+const SLOT_LABELS = { busy:'ocupada', blocked:'bloqueada', past:'ya pasó', off:'el barbero descansa' };
+
 function renderSlots(){
   const grid = $('#slotsGrid');
   if (!booking.day){ grid.innerHTML = ''; return; }
-  // Las horas que ya pasaron o en que el barbero no trabaja no se muestran;
-  // las ocupadas o bloqueadas salen tachadas.
-  grid.innerHTML = booking.day.slots.filter(s => s.status !== 'past' && s.status !== 'off').map(({ time: t, status }) => {
-    if (status !== 'available') return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ${status === 'blocked' ? 'bloqueada' : 'ocupada'}">${time12(t)}</button>`;
+  // Todas las horas del día tal como las manda Fluxsofy: solo las disponibles se
+  // pueden elegir; las ocupadas, bloqueadas, pasadas o de descanso salen tachadas.
+  grid.innerHTML = booking.day.slots.map(({ time: t, status }) => {
+    if (status !== 'available') return `<button class="slot slot--busy" disabled aria-label="${time12(t)} ${SLOT_LABELS[status] || 'no disponible'}" title="${SLOT_LABELS[status] || 'No disponible'}">${time12(t)}</button>`;
     const selected = t === booking.time;
     return `<button class="slot ${selected ? 'slot--selected' : 'slot--available'}" data-time="${t}" aria-pressed="${selected}">${time12(t)}</button>`;
   }).join('');
