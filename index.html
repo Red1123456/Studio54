@@ -1144,15 +1144,14 @@ function renderBarberPicker(){
   step.hidden = booking.team.length < 2;
   numberSteps();
   if (step.hidden) return;
-  const options = [{ id:'', name:'Cualquiera disponible' }, ...booking.team];
-  $('#barberPicker').innerHTML = options.map(m => {
-    const info = m.id ? barberInfo(m) : null;
-    const avatar = info && info.photo
+  $('#barberPicker').innerHTML = booking.team.map(m => {
+    const info = barberInfo(m);
+    const avatar = info.photo
       ? `<img class="barber-pick__photo" src="${esc(info.photo)}" alt="" width="56" height="56" loading="lazy">`
       : `<span class="barber-pick__photo barber-pick__photo--any"><svg><use href="#icon-scissors"/></svg></span>`;
     return `
     <button class="pick barber-pick ${m.id===booking.barberId?'is-active':''}" data-barber="${esc(m.id)}" aria-pressed="${m.id===booking.barberId}">
-      ${avatar}<span>${esc(info ? info.name : m.name)}</span>
+      ${avatar}<span>${esc(info.name)}</span>
     </button>`;
   }).join('');
   $$('#barberPicker .pick').forEach(btn => btn.addEventListener('click', () => {
@@ -1220,7 +1219,7 @@ function updateSummary(){
   const service = currentService();
   setText('#ticketService', service ? service.name : '—', !service);
   $('#ticketBarberRow').hidden = booking.team.length < 2;
-  setText('#ticketBarber', currentBarber() ? barberInfo(currentBarber()).name : 'Cualquiera disponible');
+  setText('#ticketBarber', currentBarber() ? barberInfo(currentBarber()).name : '—', !currentBarber());
   setText('#ticketDay', booking.day ? dayLong(parseDay(booking.day.date)) : 'Elige un día', !booking.day);
   setText('#ticketTime', booking.time ? time12(booking.time) : 'Elige una hora', !booking.time);
   $('#ticketTotal').textContent = service ? priceFmt(service.price) : '—';
@@ -1300,6 +1299,7 @@ async function initBooking(){
     const rank = (s) => { const i = order.indexOf(normalize(s.name)); return i === -1 ? order.length : i; };
     booking.services = profile.services.slice().sort((a, b) => rank(a) - rank(b));
     booking.team = profile.team;
+    booking.barberId = booking.team.length ? booking.team[0].id : ''; // se reserva siempre con un barbero
     if (profile.schedule) renderHours(profile.schedule);
     if (!booking.services.length) throw new Error('Por ahora no hay servicios disponibles en línea.');
     booking.serviceId = booking.services[0].id;
