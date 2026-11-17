@@ -360,9 +360,17 @@ section{ position:relative; padding:88px 0; }
 .barber-pick__photo--any svg{ width:22px; height:22px; }
 .barber-pick.is-active .barber-pick__photo{ border:2px solid var(--gold); }
 
-.days-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-@media(min-width:640px){ .days-row{ grid-template-columns:repeat(6,1fr); } }
-.day-btn{ background:var(--black); border:1px solid var(--hairline); border-radius:var(--radius); padding:14px 6px 12px; text-align:center; transition:border-color .3s var(--ease), background .3s var(--ease); }
+.week-nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.week-nav[hidden]{ display:none; }
+.week-nav__label{ font-size:13px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--cream); text-align:center; flex:1; }
+.week-nav__btn{ width:42px; height:42px; display:grid; place-items:center; flex-shrink:0; background:var(--black); border:1px solid var(--hairline); border-radius:50%; color:var(--gold-light); font-size:22px; line-height:1; transition:border-color .3s var(--ease), opacity .3s var(--ease); }
+.week-nav__btn:hover:not(:disabled){ border-color:var(--gold); }
+.week-nav__btn:disabled{ opacity:.3; cursor:not-allowed; }
+.days-row{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+@media(min-width:640px){ .days-row{ gap:10px; } }
+.day-btn:disabled{ opacity:.35; cursor:not-allowed; }
+.day-btn:disabled:hover{ border-color:var(--hairline); }
+.day-btn{ background:var(--black); border:1px solid var(--hairline); border-radius:var(--radius); padding:12px 2px 10px; text-align:center; transition:border-color .3s var(--ease), background .3s var(--ease); }
 .day-btn .d1{ display:block; font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); }
 .day-btn .d2{ display:block; font-family:var(--font-display); font-size:24px; line-height:1.3; color:var(--white); }
 .day-btn .d3{ display:block; font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted-2); }
@@ -680,6 +688,11 @@ section{ position:relative; padding:88px 0; }
         </div>
         <div class="booking__step">
           <div class="step-head"><span class="step-num"></span><h3>Elige el día</h3></div>
+          <div class="week-nav" id="weekNav" hidden>
+            <button type="button" class="week-nav__btn" id="weekPrev" aria-label="Semana anterior">&#8249;</button>
+            <span class="week-nav__label" id="weekLabel" aria-live="polite"></span>
+            <button type="button" class="week-nav__btn" id="weekNext" aria-label="Semana siguiente">&#8250;</button>
+          </div>
           <div class="days-row" id="daysRow"></div>
         </div>
         <div class="booking__step">
@@ -964,9 +977,9 @@ const CONFIG = {
     api: "https://api.fluxsofy.com/api/public/booking",
     slug: "fluxsofy-com-r-studio54",
   },
-  bookingDays: 12, // Máximo de días que muestra la agenda (Fluxsofy decide cuántos abre)
   // El horario de atención y el estado de cada hora salen de Fluxsofy; los textos
   // de horario de la página se reemplazan con el horario que tenga Fluxsofy.
+  // La agenda muestra todos los días que Fluxsofy tenga abiertos para reservar.
   // Foto y nombre de cada barbero en la agenda. "match" es la primera palabra
   // de su nombre en Fluxsofy (sin acentos ni mayúsculas).
   barbers: [
@@ -1102,7 +1115,7 @@ async function bookingApi(path = '', options){
 }
 
 const booking = {
-  services: [], team: [], serviceId: null, barberId: '', days: [], day: null, time: null,
+  services: [], team: [], serviceId: null, barberId: '', days: [], day: null, time: null, weekStart: null,
   loading: true, error: null, submitting: false, requestId: 0,
 };
 const currentService = () => booking.services.find(s => s.id === booking.serviceId);
@@ -1167,24 +1180,57 @@ function renderBarberPicker(){
 const DAY_NOTES = { full:'Lleno', closed:'Cerrado', off:'Descansa' };
 const isDayOpen = (d) => d.status === 'open' || d.status === 'full';
 
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const mondayOf = (d) => { const m = startOfDay(d); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; };
+const addDays = (d, n) => { const r = startOfDay(d); r.setDate(r.getDate() + n); return r; };
+// Último día agendable: el último día que devuelve Fluxsofy (su ventana de reservas).
+function lastBookableDay(){
+  const last = booking.days[booking.days.length - 1];
+  return last ? parseDay(last.date) : startOfDay(new Date());
+}
+function weekLabel(start){
+  const end = addDays(start, 6);
+  const m = (d) => MONTH_LABELS[d.getMonth()];
+  return start.getMonth() === end.getMonth()
+    ? `${start.getDate()} – ${end.getDate()} ${m(end)}`
+    : `${start.getDate()} ${m(start)} – ${end.getDate()} ${m(end)}`;
+}
+
 function renderDays(){
   const row = $('#daysRow');
+  const nav = $('#weekNav');
+  nav.hidden = true;
   if (booking.loading){ row.innerHTML = notice('Buscando horas libres…'); return; }
   if (booking.error){ row.innerHTML = notice(booking.error, true); return; }
   if (!booking.days.length){ row.innerHTML = notice('No hay días abiertos en la agenda por ahora.', true); return; }
-  row.innerHTML = booking.days.map(d => {
-    const date = parseDay(d.date);
-    const active = d === booking.day;
-    const full = d.status === 'full' || d.status === 'off';
-    const note = DAY_NOTES[d.status] || MONTH_LABELS[date.getMonth()];
+
+  const first = mondayOf(new Date());
+  const last = mondayOf(lastBookableDay());
+  if (!booking.weekStart || booking.weekStart < first) booking.weekStart = first;
+  if (booking.weekStart > last) booking.weekStart = last;
+
+  nav.hidden = false;
+  $('#weekLabel').textContent = weekLabel(booking.weekStart);
+  $('#weekPrev').disabled = booking.weekStart <= first;
+  $('#weekNext').disabled = booking.weekStart >= last;
+
+  const byDate = new Map(booking.days.map(d => [d.date, d]));
+  row.innerHTML = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(booking.weekStart, i);
+    const d = byDate.get(ymd(date)); // sin dato = fuera de la ventana de reservas
+    const active = !!d && d === booking.day;
+    const full = !!d && (d.status === 'full' || d.status === 'off');
+    const note = (d && DAY_NOTES[d.status]) || MONTH_LABELS[date.getMonth()];
+    const off = !d || d.status === 'closed';
     return `
-    <button class="day-btn ${active?'is-active':''} ${full?'day-btn--full':''}" data-day="${d.date}" aria-pressed="${active}" ${d.status === 'closed' ? 'disabled' : ''}>
+    <button class="day-btn ${active?'is-active':''} ${full?'day-btn--full':''}" ${d ? `data-day="${d.date}"` : ''} aria-pressed="${active}" ${off ? 'disabled' : ''}>
       <span class="d1">${isToday(date) ? 'Hoy' : DAY_LABELS[date.getDay()]}</span>
       <span class="d2">${date.getDate()}</span>
       <span class="d3">${note}</span>
     </button>`;
   }).join('');
-  $$('.day-btn:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
+  $$('.day-btn[data-day]:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
     booking.day = booking.days.find(d => d.date === btn.getAttribute('data-day'));
     booking.time = null;
     renderDays();
@@ -1194,6 +1240,14 @@ function renderDays(){
 }
 
 const SLOT_LABELS = { busy:'ocupada', blocked:'bloqueada', past:'ya pasó', off:'el barbero descansa' };
+
+function shiftWeek(delta){
+  if (!booking.weekStart) return;
+  booking.weekStart = addDays(booking.weekStart, delta * 7);
+  renderDays();
+}
+$('#weekPrev').addEventListener('click', () => shiftWeek(-1));
+$('#weekNext').addEventListener('click', () => shiftWeek(1));
 
 function renderSlots(){
   const grid = $('#slotsGrid');
@@ -1255,10 +1309,11 @@ async function loadAvailability(){
     const data = await bookingApi(`/availability?${params}`);
     if (requestId !== booking.requestId) return; // ya se pidió otra combinación
     const previous = booking.day && booking.day.date;
-    booking.days = data.days.slice(0, CONFIG.bookingDays);
+    booking.days = data.days;
     const open = booking.days.filter(isDayOpen);
     booking.day = booking.days.find(d => d.date === previous && d.status !== 'closed')
       || open.find(d => d.times.length) || open[0] || null;
+    booking.weekStart = booking.day ? mondayOf(parseDay(booking.day.date)) : null;
     if (!booking.day || !booking.day.times.includes(booking.time)) booking.time = null;
   } catch (error){
     if (requestId !== booking.requestId) return;
